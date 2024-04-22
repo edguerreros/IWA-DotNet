@@ -6,7 +6,7 @@
 
 *   [Overview](#overview)
 *   [Forking the Repository](#forking-the-repository)
-*   [Building the Application](#building-the-application)
+*   [Pre-Requisites](#pre-requisites)
 *   [Running the Application](#running-the-application)
 *   [Application Security Testing Integrations](#application-security-testing-integrations)
     * [SAST using Fortify SCA command line](#static-analysis-using-fortify-sca-command-line)
@@ -25,7 +25,7 @@
 
 ## Overview
 
-_IWA.NET (Insecure Web App) Pharmacy Direct_ is an example Microsoft.NET Core Web Application for use in **DevSecOps** scenarios and demonstrations.
+_IWA.NET (Insecure Web App) Pharmacy Direct_ is an example Microsoft.NET Web Application for use in **DevSecOps** scenarios and demonstrations.
 It includes some examples of bad and insecure code - which can be found using static and dynamic application
 security testing tools such as [Micro Focus Fortify](https://www.microfocus.com/en-us/cyberres/application-security).
 
@@ -51,43 +51,28 @@ permission to be added to the dedicated fork project.
  - SQL Server Express 2019 including SQL Server LocalDB
  - Visual Studio 2022 Community Edition (or higher)
 
-## Building the Application
+## Running the Application
 
 
-To create/populate the required database:
+To build and run the application locally carry out the following from a command prompt:
 
 ```
 cd InsecureWebApp
-dotnet tool install --global dotnet-ef --version 6.0
-dotnet tool restore
-dotnet ef database update
+dotnet run
 ```
 
-To build (and unit test) the application either select "Build->Build Solution" from within Visual Studio or execute the following from a
-Visual Studio Developers command prompt from the root directory of the project:
+The application will then be available at: https://localhost:5001.
 
-```
-dotnet restore
-msbuild IWA.NET.sln /p:Configuration=Debug /t:Clean,Build
-```
-## Docker Build
+You can build and run from within Visual Studio by selecting the `InsecureWebApp` project and `IWA` profile.
 
-To create docker image:
+You can also build and run a docker image using the following:
 
 ```
 docker build --tag iwa.net --file InsecureWebApp/Dockerfile .
-```
-To create and test locally, no support of SSL, use httpport=44331 to test i.e., http://localhost:44331/:
-
-```
 docker run -d -p 44331:80 iwa.net
 ```
 
-
-## Running the Application
-
-You can run the application from within Visual Studio or use the provided Azure DevOps pipeline 
-[azure-pipelines.yml](azure-pipelines.yml) to deploy it to an Azure Website.
+The application will then be available at: http://localhost:44331/.
 
 ### SAST using Fortify SCA command line
 
@@ -95,15 +80,16 @@ There is an example batch script [fortify-sca.ps1](bin/fortify-sca.ps1) that you
 via [Fortify SCA](https://www.microfocus.com/en-us/products/static-code-analysis-sast/overview).
 
 ```aidl
-FortifyScanCommands.bat
+./bin/fortify-sca.ps1
 ```
-OR directly run the below commands to execute SAST
+
+or you can directly run the below commands to execute a Fortify SCA scan.
 
 ```aidl
+cd InsecureWebApp
 sourceanalyzer -b iwa -clean
 sourceanalyzer -b iwa -debug -logfile trans.log dotnet build IWA.NET.sln
 sourceanalyzer -b iwa -debug -logfile scan.log -scan -f iwa.fpr
-start "" "iwa.fpr"
 ```
 
 This script runs a "sourceanalyzer" translation and scan on the project's source code. It creates a Fortify Project Results file called `IWA.fpr`
@@ -156,9 +142,8 @@ PDF report from using `ReportGenerator`). You could also upload it to Fortify SS
 
 ### Azure DevOps Pipelines
 
-An Azure Devops pipeline [azure-pipelines.yml](azure-pipelines.yml) is provided and has user
-selected variables such as "UseFoD" or "UseScanCentralDAST" which can be set to True or False depending
-on which application security testing integration you require.
+An Azure Devops pipeline [azure-pipelines.yml](azure-pipelines.yml) is provided and has variables such as "USE_FOD_SAST" or 
+"USE_SCANCENTRAL_SAST" which can be set to True or False depending on which application security testing integration you require.
 
 ## Licensing
 

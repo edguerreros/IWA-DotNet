@@ -8,8 +8,8 @@ trigger:
     include:
     - main
     - develop
-    - features/*
-    - releases/*
+    - feature/*
+    - release/*
     exclude:
     - experimental/*
   paths:
@@ -45,13 +45,18 @@ variables:
   # In order for the pipeline to execute successfully you should create and set the following variables in the Pipeline UI.
   # 
   # For FoD:
+  #   FOD_BASE_URL                  - FoD Base Url, e.g. "https://ams.fortify.com"
   #   FOD_API_URL                   - FoD API URL, e.g. "https://api.ams.fortify.com"
+  #   FOD_TENANT                    - FoD Tenant Name
   #   FOD_CLIENT_ID                 - FoD API Client Id
   #   FOD_CLIENT_SECRET             - FoD API Client Secret
   #
   # For SSC:
   #   SSC_URL                       - SSC URL
   #   SSC_CI_TOKEN                  - SSC CIToken
+  #
+  # For Debricked:
+  #   DEBRICKED_TOKEN               - Debricked Access Token
   #
   # For ScanCentral SAST:
   #   SCANCENTRAL_CLIENT_AUTH_TOKEN - ScanCentral SAST Client Authentication Token
@@ -72,6 +77,8 @@ variables:
 - name: USE_FOD_SAST
   value: true
 - name: USE_FOD_OSS
+  value: false
+- name: USE_DEBRICKED
   value: true
 - name: USE_FOD_DAST
   value: true
@@ -106,6 +113,24 @@ stages:
     parameters:
         srcProject: 'InsecureWebApp/InsecureWebApp.csproj' 
         testProject: 'InsecureWebAppTests/InsecureWebAppTests.csproj'
+        pool:
+            name: 'Fortify' # use named self-hosted pool 
+            #vmImage: 'windows-2022' # or uncomment to use Azure Devops cloud-hosted pool
+
+  #
+  # Software Composition Analysis - OSS Scan with Debricked
+  #
+- stage: Debricked_OSS
+  displayName: 'Debricked OSS'
+  condition: eq(variables['USE_DEBRICKED'], 'true') 
+  dependsOn: 
+    - BuildAndUnitTest
+  jobs:
+    # Run Debricked OSS Scan on Project
+  - template: 'devops-integrations/azure-pipelines/templates/debricked-oss-scan.yml'
+    parameters:
+        workingDirectory: '.' 
+        debrickedToken: $(DEBRICKED_TOKEN)
         pool:
             name: 'Fortify' # use named self-hosted pool 
             #vmImage: 'windows-2022' # or uncomment to use Azure Devops cloud-hosted pool
@@ -185,8 +210,8 @@ stages:
 - stage: DeployApp
   displayName: 'Deploy Application'
   dependsOn: 
-    - BuildAndUnitTest
-    - FoD_OSS # just an example for better visualisation
+    - FoD_SAST
+#   - ScanCentral_DAST
   jobs: 
     # This is a simulated deployment and does nothing
   - template: 'devops-integrations/azure-pipelines/templates/simulate-deployment.yml'
