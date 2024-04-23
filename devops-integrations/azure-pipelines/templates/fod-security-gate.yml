@@ -59,7 +59,7 @@ jobs:
         fcli fod session login --url ""${env:FOD_API_URL}"" --client-id ""${env:FOD_CLIENT_ID}"" --client-secret ""${env:FOD_CLIENT_SECRET}"" --session azure-pipelines
 
         Write-Host "##[command]$SecurityRating=(fcli fod release get ""${App}:${Rel}"" -o expr=""{rating}"" --session azure-pipelines"
-        $SecurityRating=(fcli fod release get "${App}:${Rel}" -o expr="{rating}" --session azure-pipelines
+        $SecurityRating=(fcli fod release get "${App}:${Rel}" -o expr="{rating}" --session azure-pipelines)
         Write-Host "##[command]$IsPassed=(fcli fod release get ""${App}:${Rel}"" -o expr=""{isPassed}"" --session azure-pipelines"
         $IsPassed=(fcli fod release get "${App}:${Rel}" -o expr="{isPassed}" --session azure-pipelines)
 
