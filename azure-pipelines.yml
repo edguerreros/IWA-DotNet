@@ -75,13 +75,13 @@ variables:
   
   # Change these variables depending on which parts of the pipeline to execute:
 - name: USE_FOD_SAST
-  value: true
+  value: false
 - name: USE_FOD_OSS
-  value: true
+  value: false
 - name: USE_DEBRICKED
   value: false
 - name: USE_FOD_DAST
-  value: true
+  value: false
 - name: USE_SCANCENTRAL_SAST
   value: false
 - name: USE_SCANCENTRAL_DAST

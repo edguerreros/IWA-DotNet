@@ -59,7 +59,9 @@ jobs:
         fcli fod session login --url ""${env:FOD_API_URL}"" --client-id ""${env:FOD_CLIENT_ID}"" --client-secret ""${env:FOD_CLIENT_SECRET}"" --session azure-pipelines
 
         Write-Host "##[command]$Rating, $IsPassed=(fcli fod release get ""${App}:${Rel}"" -o expr=""{rating}\n{isPassed}"" --session azure-pipelines"
-        $Rating, $IsPassed=(fcli fod release get "${App}:${Rel}" -o expr="{rating}\n{isPassed}" --session azure-pipelines)
+        $SecurityRating=(fcli fod release get "${App}:${Rel}" -o expr="{rating}" --session azure-pipelines)
+        $IsPassed=(fcli fod release get "${App}:${Rel}" -o expr="{isPassed}" --session azure-pipelines)
+
         Write-Host "##[command]Security Rating: ${RATING}/5"
         if ($IsPassed) {
           Write-Host "##[warning]Release ""${App}:${Rel}"" has passed security policy"
@@ -68,9 +70,12 @@ jobs:
           #exit 1
         }
 
+        fcli fod report create "HybridSummary-$(Build.BuildId)" --format pdf --release "${App}:${Rel}" --template "Hybrid Issue Detail [KAL]" --store curReport --session azure-pipelines
+        fcli fod report wait-for ::curScan:: --session azure-pipelines
+        fcli fod report download ::curScan:: -f $env:BUILD_ARTIFACTSTAGINGDIRECTORY/HybridSummary-$(Build.BuildId).pdf --session azure-pipelines
+
         Write-Host "##[command]fcli fod session logout --session azure-pipelines"
         fcli fod session logout --session azure-pipelines
-        exit 1
       showWarnings: true
     env:
       FOD_API_URL: ${{ parameters.fodApiUrl }}
@@ -78,3 +83,8 @@ jobs:
       FOD_CLIENT_SECRET: ${{ parameters.fodClientSecret }}
       FOD_APP_NAME: ${{ parameters.fodAppName }}
       FOD_RELEASE_NAME: ${{ parameters.fodReleaseName }}
+      FOD_REPORT_NAME: "HybridSummary-$(Build.BuildId)"
+- task: PublishBuildArtifacts@1
+  inputs:
+    pathToPublish: '$(Build.ArtifactStagingDirectory)'
+    artifactName: FoDReports
