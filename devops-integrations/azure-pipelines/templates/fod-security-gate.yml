@@ -1,0 +1,80 @@
+# File: templates/fod-security-gate.yml
+
+# defaults for any parameters that aren't specified
+parameters: 
+- name: 'pool'
+  type: object
+  default: {}
+- name: workingDirectory
+  default: ''
+- name: jdkVersion
+  default: '17'
+- name: jdkArch
+  default: 'x64'
+- name: fodApiUrl
+  default: 'https://api.ams.fortify.com'
+- name: fodClientId
+- name: fodClientSecret
+- name: fodAppName
+- name: fodReleaseName
+- name: fodParentReleaseName
+  default: 'main'
+
+jobs:
+- job: FoDSecurityGate
+  pool: ${{ parameters.pool }}
+  steps:
+  - task: JavaToolInstaller@0
+    inputs:
+      versionSpec: ${{ parameters.jdkVersion }}
+      jdkArchitectureOption: ${{ parameters.jdkArch }}
+      jdkSourceOption: PreInstalled
+  - task: FcliInstaller@0
+    inputs:
+      version: 'latest'   
+  - task: PowerShell@2
+    displayName: 'Validate Security Policy'
+    inputs:
+      targetType: 'inline'
+      script: |
+        $App="${env:FOD_APP_NAME}"
+        $Rel="${env:FOD_RELEASE_NAME}"
+        if (${env:FORTIFY_APP_NAME_OVERRIDE}) {
+          Write-Host "##[debug]Overriding FORTIFY_APP_NAME to ${env:FORTIFY_APP_NAME_OVERRIDE}"
+          Write-Host "##vso[task.setvariable variable=FORTIFY_APP_NAME]${env:FORTIFY_APP_NAME_OVERRIDE}"
+          $App="${env:FORTIFY_APP_NAME_OVERRIDE}"
+        } else {
+          Write-Host "##[command]Using FORTIFY_APP_NAME ${App}"
+          Write-Host "##vso[task.setvariable variable=FORTIFY_APP_NAME]${App}"
+        }
+        if (${env:FORTIFY_RELEASE_NAME_OVERRIDE}) {
+          Write-Host "##[debug]Overriding FORTIFY_RELEASE_NAME to ${env:FORTIFY_RELEASE_NAME_OVERRIDE}"
+          Write-Host "##vso[task.setvariable variable=FORTIFY_RELEASE_NAME]${env:FORTIFY_RELEASE_NAME_OVERRIDE}"
+          $Rel=${env:FORTIFY_RELEASE_NAME_OVERRIDE}
+        } else {
+          Write-Host "##[debug]Using FORTIFY_RELEASE_NAME ${Rel}"
+          Write-Host "##vso[task.setvariable variable=FORTIFY_RELEASE_NAME]${Rel}"
+        }
+        Write-Host "##[command]fcli fod session login --url ""${env:FOD_API_URL}"" --client-id ""${env:FOD_CLIENT_ID}"" --client-secret ""${env:FOD_CLIENT_SECRET}"" --session azure-pipelines"
+        fcli fod session login --url ""${env:FOD_API_URL}"" --client-id ""${env:FOD_CLIENT_ID}"" --client-secret ""${env:FOD_CLIENT_SECRET}"" --session azure-pipelines
+
+        Write-Host "##[command]$Rating, $IsPassed=(fcli fod release get ""${App}:${Rel}"" -o expr=""{rating}\n{isPassed}"" --session azure-pipelines"
+        $Rating, $IsPassed=(fcli fod release get "${App}:${Rel}" -o expr="{rating}\n{isPassed}" --session azure-pipelines)
+        Write-Host "##[command]Security Rating: ${RATING}/5"
+        if ($IsPassed) {
+          Write-Host "##[warning]Release ""${App}:${Rel}"" has passed security policy"
+        } else {
+          Write-Host "##[error]Release ""${App}:${Rel}"" failed security policy"
+          #exit 1
+        }
+
+        Write-Host "##[command]fcli fod session logout --session azure-pipelines"
+        fcli fod session logout --session azure-pipelines
+        exit 1
+      showWarnings: true
+    env:
+      FOD_API_URL: ${{ parameters.fodApiUrl }}
+      FOD_CLIENT_ID: ${{ parameters.fodClientId }}
+      FOD_CLIENT_SECRET: ${{ parameters.fodClientSecret }}
+      FOD_APP_NAME: ${{ parameters.fodAppName }}
+      FOD_RELEASE_NAME: ${{ parameters.fodReleaseName }}
