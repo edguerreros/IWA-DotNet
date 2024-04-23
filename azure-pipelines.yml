@@ -111,7 +111,7 @@ stages:
   #dependsOn: 
   #  - BuildAndUnitTest
   jobs:
-    # Verify Security Policy for the release
+    # Verify Security Policy for the Release
   - template: 'devops-integrations/azure-pipelines/templates/fod-security-gate.yml'
     parameters:
         workingDirectory: 'InsecureWebApp' 
