@@ -71,8 +71,8 @@ jobs:
         }
 
         fcli fod report create "HybridSummary-$(Build.BuildId)" --format pdf --release "${App}:${Rel}" --template "Hybrid Issue Detail [KAL]" --store curReport --session azure-pipelines
-        fcli fod report wait-for ::curScan:: --session azure-pipelines
-        fcli fod report download ::curScan:: -f $env:BUILD_ARTIFACTSTAGINGDIRECTORY/HybridSummary-$(Build.BuildId).pdf --session azure-pipelines
+        fcli fod report wait-for ::curReport:: --session azure-pipelines
+        fcli fod report download ::curReport:: -f $env:BUILD_ARTIFACTSTAGINGDIRECTORY/HybridSummary-$(Build.BuildId).pdf --session azure-pipelines
 
         Write-Host "##[command]fcli fod session logout --session azure-pipelines"
         fcli fod session logout --session azure-pipelines
