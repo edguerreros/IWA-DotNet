@@ -94,7 +94,7 @@ jobs:
   - task: PublishHtmlReport@1
     inputs:
       tabName: 'Fortify Security Report'
-      reportDir: 'fortify-download/main*.html'
+      reportDir: 'fortify-download'
   - task: PublishBuildArtifacts@1
     inputs:
       pathToPublish: 'fortify-download'
