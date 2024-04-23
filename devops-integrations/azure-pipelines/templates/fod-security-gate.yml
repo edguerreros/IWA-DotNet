@@ -62,17 +62,21 @@ jobs:
         $SecurityRating=(fcli fod release get "${App}:${Rel}" -o expr="{rating}" --session azure-pipelines)
         $IsPassed=(fcli fod release get "${App}:${Rel}" -o expr="{isPassed}" --session azure-pipelines)
 
-        Write-Host "##[command]Security Rating: ${RATING}/5"
+        Write-Host "##[debug]Security Rating: ${RATING}/5"
+
         if ($IsPassed) {
-          Write-Host "##[warning]Release ""${App}:${Rel}"" has passed security policy"
+          Write-Host "##[debug]Release ""${App}:${Rel}"" has passed security policy"
         } else {
           Write-Host "##[error]Release ""${App}:${Rel}"" failed security policy"
           #exit 1
         }
 
-        fcli fod report create "HybridSummary-$(Build.BuildId)" --format pdf --release "${App}:${Rel}" --template "Hybrid Issue Detail [KAL]" --store curReport --session azure-pipelines
-        fcli fod report wait-for ::curReport:: --session azure-pipelines
-        fcli fod report download ::curReport:: -f $env:BUILD_ARTIFACTSTAGINGDIRECTORY/HybridSummary-$(Build.BuildId).pdf --session azure-pipelines
+        fcli fod report create "HybridSummary-$(Build.BuildId)" --format html --release "${App}:${Rel}" --template "Hybrid Issue Detail [KAL]" --store curReport --session azure-pipelines
+        fcli fod report wait-for ::curReport::  --on-unknown-state=wait --session azure-pipelines
+        New-Item -ItemType Directory -Force -Path fortify-download
+        fcli fod report download ::curReport:: -f fortify-download/report-$(Build.BuildId).zip --session azure-pipelines
+        Expand-Archive fortify-download/report-$(Build.BuildId).zip -DestinationPath fortify-download
+        Remove-Item -Force fortify-download/report-$(Build.BuildId).zip
 
         Write-Host "##[command]fcli fod session logout --session azure-pipelines"
         fcli fod session logout --session azure-pipelines
@@ -84,7 +88,11 @@ jobs:
       FOD_APP_NAME: ${{ parameters.fodAppName }}
       FOD_RELEASE_NAME: ${{ parameters.fodReleaseName }}
       FOD_REPORT_NAME: "HybridSummary-$(Build.BuildId)"
+  - task: PublishHtmlReport@1
+    inputs:
+      tabName: 'Fortify Security Report'
+      reportDir: 'fortify-download'
   - task: PublishBuildArtifacts@1
     inputs:
-      pathToPublish: '$(Build.ArtifactStagingDirectory)'
-      artifactName: FoDReports
+      pathToPublish: 'fortify-download'
+      artifactName: FortifyReports
