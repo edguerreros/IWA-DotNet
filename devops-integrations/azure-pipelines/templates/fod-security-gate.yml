@@ -58,8 +58,9 @@ jobs:
         Write-Host "##[command]fcli fod session login --url ""${env:FOD_API_URL}"" --client-id ""${env:FOD_CLIENT_ID}"" --client-secret ""${env:FOD_CLIENT_SECRET}"" --session azure-pipelines"
         fcli fod session login --url ""${env:FOD_API_URL}"" --client-id ""${env:FOD_CLIENT_ID}"" --client-secret ""${env:FOD_CLIENT_SECRET}"" --session azure-pipelines
 
-        Write-Host "##[command]$Rating, $IsPassed=(fcli fod release get ""${App}:${Rel}"" -o expr=""{rating}\n{isPassed}"" --session azure-pipelines"
-        $SecurityRating=(fcli fod release get "${App}:${Rel}" -o expr="{rating}" --session azure-pipelines)
+        Write-Host "##[command]$SecurityRating=(fcli fod release get ""${App}:${Rel}"" -o expr=""{rating}"" --session azure-pipelines"
+        $SecurityRating=(fcli fod release get "${App}:${Rel}" -o expr="{rating}" --session azure-pipelines
+        Write-Host "##[command]$IsPassed=(fcli fod release get ""${App}:${Rel}"" -o expr=""{isPassed}"" --session azure-pipelines"
         $IsPassed=(fcli fod release get "${App}:${Rel}" -o expr="{isPassed}" --session azure-pipelines)
 
         Write-Host "##[debug]Security Rating: ${RATING}/5"
@@ -72,10 +73,12 @@ jobs:
         }
 
         fcli fod report create "HybridSummary-$(Build.BuildId)" --format html --release "${App}:${Rel}" --template "Hybrid Issue Detail [KAL]" --store curReport --session azure-pipelines
-        fcli fod report wait-for ::curReport::  --on-unknown-state=wait --session azure-pipelines
+        fcli fod report wait-for ::curReport:: --on-unknown-state=wait --session azure-pipelines
         New-Item -ItemType Directory -Force -Path fortify-download
         fcli fod report download ::curReport:: -f fortify-download/report-$(Build.BuildId).zip --session azure-pipelines
-        Expand-Archive fortify-download/report-$(Build.BuildId).zip -DestinationPath fortify-download
+        Get-ChildItem fortify-download
+        Expand-Archive -Path fortify-download/report-$(Build.BuildId).zip -DestinationPath fortify-download
+        Get-ChildItem fortify-download
         Remove-Item -Force fortify-download/report-$(Build.BuildId).zip
 
         Write-Host "##[command]fcli fod session logout --session azure-pipelines"
