@@ -86,7 +86,7 @@ jobs:
         Get-ChildItem -Path ${env:FOD_REPORT_DIR} -Filter '*.html' | Rename-Item -NewName { $_.Name -replace '_\d+' }
         Get-ChildItem ${env:FOD_REPORT_DIR}
         Remove-Item -Force ${env:FOD_REPORT_DIR}/${env:FOD_REPORT_NAME}.zip
-        fcli fod report delete "${env:FOD_REPORT_NAME}"
+        fcli fod report delete "${env:FOD_REPORT_NAME}" --session azure-pipelines
 
         Write-Host "##[command]fcli fod session logout --session azure-pipelines"
         fcli fod session logout --session azure-pipelines
@@ -103,10 +103,10 @@ jobs:
   - task: PublishBuildArtifacts@1
     condition: succeededOrFailed()
     inputs:
-      pathToPublish: '${parameters.reportDir}/main.html'
+      pathToPublish: ${{ parameters.reportDir }}
       artifactName: FortifyReports
   - task: PublishHtmlReport@1
     condition: succeededOrFailed()
     inputs:
       tabName: 'Fortify Security Report'
-      reportDir: '${parameters.reportDir}'
+      reportDir: ${{ parameters.reportDir }}
