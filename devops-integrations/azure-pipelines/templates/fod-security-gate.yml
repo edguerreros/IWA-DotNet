@@ -19,6 +19,10 @@ parameters:
 - name: fodReleaseName
 - name: fodParentReleaseName
   default: 'main'
+- name: fodReportTemplate
+  default: 'HybridIssueDetail'
+- name: reportDir
+  default: 'reports'
 
 jobs:
 - job: FoDSecurityGate
@@ -63,7 +67,7 @@ jobs:
         Write-Host "##[command]`$IsPassed=(fcli fod release get ""${App}:${Rel}"" -o expr=""{isPassed}"" --session azure-pipelines"
         $IsPassed=(fcli fod release get "${App}:${Rel}" -o expr="{isPassed}" --session azure-pipelines)
 
-        Write-Host "##[debug]Security Rating: ${$SecurityRating}/5"
+        Write-Host "##[debug]Release ""${App}:${Rel}"" Security Rating: ${SecurityRating}/5"
 
         if ($IsPassed) {
           Write-Host "##[debug]Release ""${App}:${Rel}"" has passed security policy"
@@ -72,16 +76,17 @@ jobs:
           #exit 1
         }
 
-        fcli fod report create "HybridSummary-$(Build.BuildId)" --format html --release "${App}:${Rel}" --template "Hybrid Issue Detail [KAL]" --store curReport --session azure-pipelines
+        fcli fod report create "${env:FOD_REPORT_NAME}" --format html --release "${App}:${Rel}" --template "${env:FOD_REPORT_TEMPLATE}" --store curReport --session azure-pipelines
         fcli fod report wait-for ::curReport:: --on-unknown-state=wait --session azure-pipelines
-        New-Item -ItemType Directory -Force -Path fortify-download
-        fcli fod report download ::curReport:: -f fortify-download/report-$(Build.BuildId).zip --session azure-pipelines
-        Get-ChildItem fortify-download
-        Expand-Archive -Path fortify-download/report-$(Build.BuildId).zip -DestinationPath fortify-download
-        Get-ChildItem fortify-download
-        Get-ChildItem -Path FoD-Summary-Report-2 -Filter '*.html' | Rename-Item -NewName { $_.Name -replace '_\d+' }
-        Get-ChildItem fortify-download
-        Remove-Item -Force fortify-download/report-$(Build.BuildId).zip
+        New-Item -ItemType Directory -Force -Path ${env:FOD_REPORT_DIR}
+        fcli fod report download ::curReport:: -f ${env:FOD_REPORT_DIR}/${env:FOD_REPORT_NAME}.zip --session azure-pipelines
+        Get-ChildItem ${env:FOD_REPORT_DIR}
+        Expand-Archive -Path ${env:FOD_REPORT_DIR}/${env:FOD_REPORT_NAME}.zip -DestinationPath ${env:FOD_REPORT_DIR}
+        Get-ChildItem ${env:FOD_REPORT_DIR}
+        Get-ChildItem -Path ${env:FOD_REPORT_DIR} -Filter '*.html' | Rename-Item -NewName { $_.Name -replace '_\d+' }
+        Get-ChildItem ${env:FOD_REPORT_DIR}
+        Remove-Item -Force ${env:FOD_REPORT_DIR}/${env:FOD_REPORT_NAME}.zip
+        fcli fod report delete "${env:FOD_REPORT_NAME}"
 
         Write-Host "##[command]fcli fod session logout --session azure-pipelines"
         fcli fod session logout --session azure-pipelines
@@ -92,14 +97,16 @@ jobs:
       FOD_CLIENT_SECRET: ${{ parameters.fodClientSecret }}
       FOD_APP_NAME: ${{ parameters.fodAppName }}
       FOD_RELEASE_NAME: ${{ parameters.fodReleaseName }}
-      FOD_REPORT_NAME: "HybridSummary-$(Build.BuildId)"
+      FOD_REPORT_TEMPLATE: ${{ parameters.fodReportTemplate }}
+      FOD_REPORT_DIR: ${{ parameters.reportDir }}
+      FOD_REPORT_NAME: "Report-$(Build.BuildId)"
   - task: PublishBuildArtifacts@1
     condition: succeededOrFailed()
     inputs:
-      pathToPublish: 'fortify-download/mains.html'
+      pathToPublish: '${parameters.reportDir}/main.html'
       artifactName: FortifyReports
   - task: PublishHtmlReport@1
     condition: succeededOrFailed()
     inputs:
       tabName: 'Fortify Security Report'
-      reportDir: 'fortify-download'
+      reportDir: '${parameters.reportDir}'
