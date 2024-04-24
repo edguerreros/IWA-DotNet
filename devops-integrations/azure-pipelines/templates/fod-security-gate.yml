@@ -79,6 +79,8 @@ jobs:
         Get-ChildItem fortify-download
         Expand-Archive -Path fortify-download/report-$(Build.BuildId).zip -DestinationPath fortify-download
         Get-ChildItem fortify-download
+        Get-ChildItem -Path FoD-Summary-Report-2 -Filter '*.html' | Rename-Item -NewName { $_.Name -replace '_\d+' }
+        Get-ChildItem fortify-download
         Remove-Item -Force fortify-download/report-$(Build.BuildId).zip
 
         Write-Host "##[command]fcli fod session logout --session azure-pipelines"
@@ -91,11 +93,13 @@ jobs:
       FOD_APP_NAME: ${{ parameters.fodAppName }}
       FOD_RELEASE_NAME: ${{ parameters.fodReleaseName }}
       FOD_REPORT_NAME: "HybridSummary-$(Build.BuildId)"
+  - task: PublishBuildArtifacts@1
+    condition: succeededOrFailed()
+    inputs:
+      pathToPublish: 'fortify-download/mains.html'
+      artifactName: FortifyReports
   - task: PublishHtmlReport@1
+    condition: succeededOrFailed()
     inputs:
       tabName: 'Fortify Security Report'
       reportDir: 'fortify-download'
-  - task: PublishBuildArtifacts@1
-    inputs:
-      pathToPublish: 'fortify-download'
-      artifactName: FortifyReports
