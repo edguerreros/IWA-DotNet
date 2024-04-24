@@ -23,6 +23,8 @@ parameters:
   default: 'HybridIssueDetail'
 - name: reportDir
   default: 'reports'
+- name: reportFile
+  default: 'reports/main.html'
 
 jobs:
 - job: FoDSecurityGate
@@ -107,4 +109,4 @@ jobs:
     condition: succeededOrFailed()
     inputs:
       tabName: 'Fortify Security Report'
-      reportDir: ${{ parameters.reportDir }}
+      reportDir: ${{ parameters.reportFile }}
