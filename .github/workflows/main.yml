@@ -117,18 +117,66 @@ jobs:
         env:
           FOD_APP_NAME: ${{ steps.fortify-app-and-rel-name.outputs.app_name }}
           FOD_RELEASE_NAME: ${{ steps.fortify-app-and-rel-name.outputs.release_name }}          
-      - name: Net FoD SAST scan
-        id: net-fod-sast-scan
-        uses: edguerreros/github-actions/net-fod-sast-scan@main
-        with:
-          working_directory: ${{ env.BASE_DIR }}
-          fod_url: ${{ vars.FOD_URL }}
-          fod_api_url: ${{ vars.FOD_API_URL }}
-          fod_client_id: ${{ secrets.FOD_CLIENT_ID }}
-          fod_client_secret: ${{ secrets.FOD_CLIENT_SECRET }}
-          fod_app_name: ${{ steps.fortify-app-and-rel-name.outputs.app_name }}
-          fod_release_name: ${{ steps.fortify-app-and-rel-name.outputs.release_name }}
-          fod_parent_release_name: ${{ steps.fortify-app-and-rel-name.outputs.parent_release_name }}
+      # Login to Fortify on Demand fcli session
+      - name: Login fcli
+        working-directory: ${{ env.BASE_DIR }}
+        shell: bash
+        run: |
+          fcli fod session login --url $FOD_API_URI --client-id $FOD_CLIENT_ID --client-secret $FOD_CLIENT_SECRET --session github-actions
+        env:
+          FOD_API_URI: ${{ inputs.fod_api_url }}
+          FOD_CLIENT_ID: ${{ inputs.fod_client_id }}
+          FOD_CLIENT_SECRET: ${{ inputs.fod_client_secret }}
+      # Create a new Fortify on Demand release for GitHub branch
+      - name: Create FoD release
+        id: create-release
+        working-directory: ${{ env.BASE_DIR }}
+        shell: bash
+        run: |
+          fcli fod release list --app "$FOD_APP_NAME" --session github-actions
+          echo fcli fod release create "${FOD_APP_NAME}:${FOD_RELEASE_NAME}" --description "Created automatically from GitHub" --copy-from "${FOD_APP_NAME}:${FOD_PARENT_RELEASE_NAME}" --status Development --skip-if-exists -o expr="{releaseId}" --session github-actions
+          RELID=$(fcli fod release create "${FOD_APP_NAME}:${FOD_RELEASE_NAME}" --description "Created automatically from GitHub" --copy-from "${FOD_APP_NAME}:${FOD_PARENT_RELEASE_NAME}" --status Development --skip-if-exists -o expr="{releaseId}" --session github-actions)
+          echo "::debug::Created/Using fod_release_id=${RELID}"
+          echo "release_id=${RELID}" >> $GITHUB_OUTPUT
+        env:
+          FOD_APP_NAME: ${{ inputs.fod_app_name }}
+          FOD_RELEASE_NAME: ${{ inputs.fod_release_name }}
+          FOD_PARENT_RELEASE_NAME: ${{ inputs.fod_parent_release_name }}
+      - name: Package Code + Dependencies
+        uses: edguerreros/github-action/package@main
+        env:
+          EXTRA_PACKAGE_OPTS: -bf "${BUILD_FILE}" -oss
+          PACKAGE_FILE: "package"
+          # Cambiar por el nombre correcto de la solución
+          BUILD_FILE: "IWA.NET.sln"
+      # Start Fortify on Demand SAST scan and wait until results complete.
+      - name: Perform FoD SAST scan
+        id: fod-sast-scan
+        working-directory: ${{ env.BASE_DIR }}
+        shell: bash
+        run: |
+          fcli fod sast-scan start --release "${FOD_RELEASE_NAME}" --notes "${FOD_SCAN_NOTES}" -f $PACKAGE_FILE --store curScan --session github-actions
+          echo "fod_scan_id=$(fcli util var contents curScan -o 'expr={scanId}')" >> $GITHUB_OUTPUT
+          sleep 10
+          fcli fod sast-scan wait-for ::curScan:: --session github-actions
+        env:
+          PACKAGE_FILE: "package.zip"
+          FOD_RELEASE_NAME: ${{ format('{0}:{1}', inputs.fod_app_name, inputs.fod_release_name) }}
+          FOD_SCAN_NOTES: "Triggered by GitHub Actions (${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+      # Export FoD vulnerability data to GitHub
+      - name: Export FoD vulnerability data to GitHub
+        uses: edguerreros/github-action/fod-export@main
+        env:
+          FOD_URL: ${{ inputs.fod_url }}
+          FOD_TENANT: "FranklinBank24"
+          FOD_CLIENT_SECRET: ${{ inputs.fod_client_secret }}
+          FOD_CLIENT_ID: ${{ inputs.fod_client_id }}
+          FOD_RELEASE: ${{ format('{0}:{1}', inputs.fod_app_name, inputs.fod_release_name) }}
+      # Logout/Close Fortify on Demand fcli session
+      - name: Logout fcli
+        shell: bash
+        run: |
+          fcli fod session logout --session github-actions
 
   Deploy-App:
     runs-on: ubuntu-latest
