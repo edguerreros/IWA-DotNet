@@ -107,6 +107,7 @@ jobs:
         with:
           # Fetch at least the immediate parents so that if this is a pull request then we can checkout the head.
           fetch-depth: 2
+          working_directory: ${{ env.BASE_DIR }}
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
