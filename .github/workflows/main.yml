@@ -54,11 +54,7 @@ jobs:
 
   Build-And-Unit-Test:
     # The type of runner that the job will run on
-    runs-on: windows-latest
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -78,11 +74,7 @@ jobs:
         run: dotnet build 
         
   Quality-Gate:
-    runs-on: windows-latest
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
+    runs-on: ubuntu-latest
     if: ${{ always() }}
     needs: [ Build-And-Unit-Test ]
     steps:
@@ -95,11 +87,7 @@ jobs:
     # TBD
 
   FoD-SAST-Scan:
-    runs-on: windows-latest
-    permissions:
-      actions: write
-      contents: write
-      security-events: write
+    runs-on: ubuntu-latest
     if: ${{ (github.event_name == 'push') || (github.event_name == 'pull_request') || (github.event.inputs.runFoDSASTScan == 'true') }}
     steps:
       - name: Checkout
@@ -107,7 +95,6 @@ jobs:
         with:
           # Fetch at least the immediate parents so that if this is a pull request then we can checkout the head.
           fetch-depth: 2
-          working_directory: ${{ env.BASE_DIR }}
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -144,11 +131,7 @@ jobs:
           fod_parent_release_name: ${{ steps.fortify-app-and-rel-name.outputs.parent_release_name }}
 
   Deploy-App:
-    runs-on: windows-latest
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
+    runs-on: ubuntu-latest
     if: ${{ (github.event_name == 'push') || (github.event_name == 'pull_request') || (github.event.inputs.deployApp == 'true') }}
     needs: [ Build-And-Unit-Test, FoD-SAST-Scan ]
     steps:
@@ -166,11 +149,7 @@ jobs:
       # TBD 
 
   Functional-Test:
-    runs-on: windows-latest
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
+    runs-on: ubuntu-latest
     if: ${{ always() }}
     needs: [ Deploy-App ]
     steps:
