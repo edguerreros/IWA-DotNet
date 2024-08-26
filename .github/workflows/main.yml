@@ -54,7 +54,7 @@ jobs:
 
   Build-And-Unit-Test:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -74,7 +74,7 @@ jobs:
         run: dotnet build 
         
   Quality-Gate:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     if: ${{ always() }}
     needs: [ Build-And-Unit-Test ]
     steps:
@@ -87,7 +87,7 @@ jobs:
     # TBD
 
   FoD-SAST-Scan:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     if: ${{ (github.event_name == 'push') || (github.event_name == 'pull_request') || (github.event.inputs.runFoDSASTScan == 'true') }}
     steps:
       - name: Checkout
