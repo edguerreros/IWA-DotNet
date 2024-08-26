@@ -118,6 +118,12 @@ jobs:
           FOD_APP_NAME: ${{ steps.fortify-app-and-rel-name.outputs.app_name }}
           FOD_RELEASE_NAME: ${{ steps.fortify-app-and-rel-name.outputs.release_name }}          
       # Login to Fortify on Demand fcli session
+      - name: Setup Fortify tools
+        uses: edguerreros/github-action/setup@main
+        with:
+          export-path: true
+          fcli: latest
+          vuln-exporter: latest
       - name: Login fcli
         working-directory: ${{ env.BASE_DIR }}
         shell: bash
